@@ -1,26 +1,36 @@
-# GTM dataLayer for Iframe Form Interactions and Form Submissions
+# GTM dataLayer for Iframe Form Interactions and Submissions
 
-If you lack access to the iframe source site, it is quite impossible to track iframe form submit event with Google Tag Manager. However, a solution to this problem is available through the following code snippet.
+This version of the script is a **forked and modified version** of Md Hasanuzzaman's original script. It is adapted to work specifically with a **[Dripjobs](https://www.dripjobs.com/) appointment request form** embedded in an iframe on a Next.js 14 site. This modified version detects form submissions by observing changes to the iframe's attributes and presence, rather than relying on form height changes.
+
+## How the Script Works
+
+The script monitors various events to track user interactions and form submissions within an iframe:
+- **MutationObserver** is used to detect attribute changes (such as style or class changes) in the iframe.
+- A periodic check is conducted to see if the iframe is removed from the DOM (e.g., after a form submission and redirect).
+- `mouseover` and `blur` events are used to track when the user interacts with the iframe.
+- When the script detects a form submission, it pushes an event (`iframe_form_submit`) to the `dataLayer` in Google Tag Manager.
+
+### Key Features of this Script:
+- **`iframe_form_start`**: Triggered when the user first interacts with the form inside the iframe.
+- **`iframe_form_submit`**: Triggered when the form submission is detected through attribute changes or the iframe's removal from the DOM.
+- It also logs the **method of detection** (e.g., "iframe removed", "iframe attributes changed", etc.).
 
 ## How to Implement
 
-1. In Google Tag Manager, create a new tag as a custom HTML tag.
-2. Inside the tag, paste the entire code from the `script.js` file provided in this repository. Don't forget to wrap the code with ```<script>``` tag.
-3. Set the trigger to fire on *All Pages* page views.
+1. **In Google Tag Manager**, create a new tag as a Custom HTML tag.
+2. **Paste the modified script** into the Custom HTML tag. Make sure the script is wrapped within `<script>` tags.
+3. Set the trigger to fire on **All Pages** page views.
+4. Ensure that the Dripjobs form is set to **redirect to a page on the same origin site** (where Google Tag Manager is installed).
+5. Once configured, you will begin receiving the following `dataLayer` events in Google Tag Manager:
+    - **`iframe_form_start`**: Triggered when the user first interacts with the iframe form.
+    - **`iframe_form_submit`**: Triggered when the form submission is detected (through attribute changes or iframe removal).
 
-Once you've configured this setup, you'll begin receiving Google Tag Manager dataLayer events:
+## Recommendations
 
-- **iframe_from_start**: This event will be triggered when a visitor first interacts with the form within the iframe.
-- **iframe_from_submit**: You'll receive this event when the form is successfully submitted.
+- **Multiple iframes**: If your webpage contains multiple iframes, it's highly recommended to adjust the `iframeSelector` on line 3 of the script to properly target the correct iframe. You can use CSS class selectors or ID selectors for precise targeting.
+- **Check Period**: The script checks the presence of the iframe every 1000ms (1 second). If you want a faster detection, you can decrease the interval by modifying the value in the `setInterval` function.
 
-**Recommendations:** Keep in mind that your web page may contain multiple iframes. Therefore, it is highly recommended to adjust the iframe selector to target the correct iframe in ***line no: 12*** of the code. You can utilize CSS class selectors or ID selectors for this purpose.
+## Special Thanks
 
-## Contact Me
-Md Hasanuzzaman
-
-Email: webhasan24@gmail.com
-
-Linkedin: https://linkedin.com/md-h
-
-Youtube: https://www.youtube.com/@LeoMeasure-nr3pf
+Special thanks to **Md Hasanuzzaman** for creating the original version of this script and for the helpful [YouTube video](https://www.youtube.com/watch?v=ladW4ayW840&t=197s) explaining how to configure Google Tag Manager and Google Analytics for iframe tracking. You can check out his YouTube channel [here](https://www.youtube.com/@leomeasure).
 

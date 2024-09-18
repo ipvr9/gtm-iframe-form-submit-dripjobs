@@ -1,38 +1,12 @@
 (function() {
-    function leoMeasureIframeFormSubmitDataLayer() {
-        /**
-         * Author: Md Hasanuzzaman
-         * Email: webhasan24@gmail.com
-         * Linkedin: https://linkedin.com/md-h
-         * Youtube: https://www.youtube.com/@LeoMeasure-nr3pf
-         */
-    
+    function IframeFormSubmitDataLayer() {
         var iframeSelector = 'iframe'; // change this as your iframe selector
-    
         var iframe = document.querySelector(iframeSelector);
-        var isFormSubmitted = false;
         var isInsideIframe = false;
         var isCodeExecuted = false;
-        var iframeHeight;
-    
-        var observer = new MutationObserver(function (_mutationsList, observer) {
-            var currentHeight = iframe.offsetHeight;
-            var iframeHeightChange = Math.abs(((currentHeight - iframeHeight) / iframeHeight) * 100);
-    
-            if (!isFormSubmitted && iframeHeightChange > 40) {
-                observer.disconnect();
-    
-                isFormSubmitted = true;
-                window.dataLayer = window.dataLayer || [];
-                dataLayer.push({
-                    event: 'iframe_form_submit',
-                    form_location: window.location.href,
-                    iframe_id: iframe.getAttribute('id'),
-                    iframe_class: iframe.getAttribute('class')
-                });
-            }
-        });
-    
+        var submissionDetected = false;
+        var checkInterval;
+
         function handleMouseOver(event) {
             if (event.target.closest(iframeSelector)) {
                 isInsideIframe = true;
@@ -40,51 +14,58 @@
                 isInsideIframe = false;
             }
         }
-    
-        function handleFormSubmission() {
-            var formInsideIframe = iframe.contentDocument.querySelector('form');
-    
-            formInsideIframe.addEventListener('submit', function (event) {
-                var formData = {};
-                var formInputs = formInsideIframe.querySelectorAll('input, select, textarea');
-    
-                for (var i = 0; i < formInputs.length; i++) {
-                    var input = formInputs[i];
-                    if (input.type === 'radio') {
-    
-                        if (input.checked) {
-                            formData[input.name] = input.value;
-                        }
-                    } else if (input.type === 'checkbox') {
-                        if (!formData[input.name]) {
-                            formData[input.name] = [];
-                        }
-                        if (input.checked) {
-                            formData[input.name].push(input.value);
-                        }
-                    } else {
-                        formData[input.name] = input.value;
-                    }
-                }
-    
+
+        function detectSubmission(reason) {
+            if (!submissionDetected) {
+                submissionDetected = true;
                 window.dataLayer = window.dataLayer || [];
-                window.dataLayer.push({
+                dataLayer.push({
                     event: 'iframe_form_submit',
                     form_location: window.location.href,
                     iframe_id: iframe.getAttribute('id'),
                     iframe_class: iframe.getAttribute('class'),
-                    user_inputs: formData
+                    detection_method: reason
                 });
+                console.log('Form submission detected:', reason);
+                clearInterval(checkInterval);
+            }
+        }
+
+        function checkIframePresence() {
+            if (!document.body.contains(iframe)) {
+                detectSubmission('iframe removed');
+            }
+        }
+
+        // Set up MutationObserver
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes') {
+                    detectSubmission('iframe attributes changed');
+                }
+            });
+        });
+
+        function startTracking() {
+            // Start observing the iframe
+            observer.observe(iframe, { attributes: true, attributeFilter: ['style', 'class'] });
+
+            // Start periodic checks
+            checkInterval = setInterval(checkIframePresence, 1000);
+
+            // Listen for page unload
+            window.addEventListener('beforeunload', function() {
+                detectSubmission('page unload');
             });
         }
-    
+
         document.addEventListener('mouseover', handleMouseOver);
+
         window.addEventListener('blur', function () {
-    
             if (isInsideIframe && !isCodeExecuted) {
                 isCodeExecuted = true;
                 document.removeEventListener('mouseover', handleMouseOver);
-    
+
                 window.dataLayer = window.dataLayer || [];
                 dataLayer.push({
                     event: 'iframe_form_start',
@@ -92,15 +73,26 @@
                     iframe_id: iframe.getAttribute('id'),
                     iframe_class: iframe.getAttribute('class')
                 });
-    
-                if (iframe.contentDocument) {
-                    handleFormSubmission();
-                } else {
-                    iframeHeight = iframe.offsetHeight;
-                    observer.observe(iframe, { attributes: true, childList: true, subtree: true });
-                }
+
+                startTracking();
             }
         });
+
+        // Initial check when the script loads
+        if (document.activeElement === iframe) {
+            isInsideIframe = true;
+            isCodeExecuted = true;
+            
+            window.dataLayer = window.dataLayer || [];
+            dataLayer.push({
+                event: 'iframe_form_start',
+                form_location: window.location.href,
+                iframe_id: iframe.getAttribute('id'),
+                iframe_class: iframe.getAttribute('class')
+            });
+
+            startTracking();
+        }
     }
-    leoMeasureIframeFormSubmitDataLayer();
-})()
+    IframeFormSubmitDataLayer();
+})();
